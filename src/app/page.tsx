@@ -30,7 +30,9 @@ export default function Home() {
       </Button>
 
       <Sheet>
-        <SheetTrigger render={<Button variant="outline" className="h-[52px] w-full" />}>
+        <SheetTrigger
+          render={<Button variant="outline" className="h-[52px] w-full" />}
+        >
           Open sheet
         </SheetTrigger>
         <SheetContent side="bottom">
