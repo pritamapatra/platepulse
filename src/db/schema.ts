@@ -193,3 +193,68 @@ export const purchaseLines = pgTable(
   },
   (t) => [index("purchase_lines_purchase_idx").on(t.purchaseId)],
 );
+
+export const supplierPayments = pgTable(
+  "supplier_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    purchaseId: uuid("purchase_id").references(() => purchases.id),
+    createdBy: uuid("created_by").notNull(),
+    clientRequestId: uuid("client_request_id").notNull(),
+    businessDate: date("business_date", { mode: "string" }).notNull(),
+    method: paymentMethod("method").notNull(),
+    amountPaise: integer("amount_paise").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("supplier_payments_restaurant_request_uq").on(
+      t.restaurantId,
+      t.clientRequestId,
+    ),
+    index("supplier_payments_restaurant_supplier_idx").on(
+      t.restaurantId,
+      t.supplierId,
+    ),
+    index("supplier_payments_restaurant_date_idx").on(
+      t.restaurantId,
+      t.businessDate,
+    ),
+  ],
+);
+
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    createdBy: uuid("created_by").notNull(),
+    clientRequestId: uuid("client_request_id").notNull(),
+    businessDate: date("business_date", { mode: "string" }).notNull(),
+    category: text("category").notNull(),
+    paidTo: text("paid_to"),
+    method: paymentMethod("method").notNull(),
+    amountPaise: integer("amount_paise").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("expenses_restaurant_request_uq").on(
+      t.restaurantId,
+      t.clientRequestId,
+    ),
+    index("expenses_restaurant_date_idx").on(t.restaurantId, t.businessDate),
+  ],
+);
