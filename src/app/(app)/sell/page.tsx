@@ -5,20 +5,27 @@ import { logOut } from "@/app/(app)/account/actions";
 import { Button } from "@/components/ui/button";
 import { businessDate } from "@/lib/business-date";
 import { getOpeningCash } from "@/lib/daily-close-queries";
+import { listSellableItems } from "@/lib/menu-queries";
 import { formatPaise } from "@/lib/money";
 import { getSession } from "@/lib/session";
 import { OpeningCashForm } from "./opening-cash-form";
+import { SellGrid } from "./sell-grid";
+import { SellRefresher } from "./sell-refresher";
 
 export const metadata: Metadata = { title: "Sell" };
 
-async function SellPlaceholder() {
+async function SellContent() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const opening = await getOpeningCash(session.restaurantId, businessDate());
+  const [opening, items] = await Promise.all([
+    getOpeningCash(session.restaurantId, businessDate()),
+    listSellableItems(session.restaurantId),
+  ]);
 
   return (
     <div className="space-y-6">
+      <SellRefresher />
       <section className="border-b border-ink-300 pb-4">
         {opening === null ? (
           <OpeningCashForm />
@@ -31,11 +38,16 @@ async function SellPlaceholder() {
           </p>
         )}
       </section>
-      <div className="space-y-4">
+      <SellGrid
+        items={items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          pricePaise: item.pricePaise,
+        }))}
+        isOwner={session.role === "owner"}
+      />
+      <div className="space-y-4 border-t border-ink-300 pt-4">
         <p className="text-ink-600">Signed in as {session.email}</p>
-        <p className="text-ink-600">
-          The sales screen arrives in a later task.
-        </p>
         <form action={logOut}>
           <Button type="submit" variant="outline" className="h-[52px] w-full">
             Sign out
@@ -51,7 +63,7 @@ export default function SellPage() {
     <main className="mx-auto w-full max-w-[720px] space-y-6 p-4 md:p-6">
       <h1 className="text-xl font-semibold text-ink-900">Sell</h1>
       <Suspense fallback={<div className="h-6 w-48 bg-surface-subtle" />}>
-        <SellPlaceholder />
+        <SellContent />
       </Suspense>
     </main>
   );
