@@ -1,4 +1,7 @@
 import {
+  boolean,
+  index,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -34,4 +37,21 @@ export const memberships = pgTable(
   (t) => [
     unique("memberships_restaurant_user_uq").on(t.restaurantId, t.userId),
   ],
+);
+
+export const menuItems = pgTable(
+  "menu_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    name: text("name").notNull(),
+    pricePaise: integer("price_paise").notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("menu_items_restaurant_idx").on(t.restaurantId)],
 );
