@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "db:check": "tsx --env-file=.env.local scripts/db-check.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx --env-file=.env.local scripts/seed.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
