@@ -2,19 +2,19 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/session";
 import { logOut } from "./actions";
 
 export const metadata: Metadata = { title: "Account" };
 
 async function AccountDetails() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims) redirect("/login");
+  const session = await getSession();
+  if (!session) redirect("/login");
 
   return (
     <div className="space-y-4">
-      <p className="text-ink-600">Signed in as {String(data.claims.email)}</p>
+      <p className="text-ink-600">Signed in as {session.email}</p>
+      <p className="text-ink-600">Role: {session.role}</p>
       <form action={logOut}>
         <Button type="submit" variant="outline" className="h-[52px] w-full">
           Sign out
