@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   index,
   integer,
   pgEnum,
@@ -54,4 +55,46 @@ export const menuItems = pgTable(
       .defaultNow(),
   },
   (t) => [index("menu_items_restaurant_idx").on(t.restaurantId)],
+);
+
+export const paymentMethod = pgEnum("payment_method", ["cash", "upi"]);
+
+export const sales = pgTable(
+  "sales",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    createdBy: uuid("created_by").notNull(),
+    clientRequestId: uuid("client_request_id").notNull(),
+    businessDate: date("business_date", { mode: "string" }).notNull(),
+    paymentMethod: paymentMethod("payment_method").notNull(),
+    totalPaise: integer("total_paise").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("sales_restaurant_request_uq").on(t.restaurantId, t.clientRequestId),
+    index("sales_restaurant_date_idx").on(t.restaurantId, t.businessDate),
+  ],
+);
+
+export const saleLines = pgTable(
+  "sale_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    saleId: uuid("sale_id")
+      .notNull()
+      .references(() => sales.id),
+    menuItemId: uuid("menu_item_id")
+      .notNull()
+      .references(() => menuItems.id),
+    nameSnapshot: text("name_snapshot").notNull(),
+    unitPricePaise: integer("unit_price_paise").notNull(),
+    quantity: integer("quantity").notNull(),
+  },
+  (t) => [index("sale_lines_sale_idx").on(t.saleId)],
 );
