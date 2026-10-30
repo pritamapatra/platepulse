@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublicPath } from "@/lib/routes";
+import { homePathFor, isPublicPath } from "@/lib/routes";
 
 describe("isPublicPath", () => {
   it.each(["/", "/login", "/signup", "/auth/confirm", "/api/health"])(
@@ -15,4 +15,14 @@ describe("isPublicPath", () => {
       expect(isPublicPath(path)).toBe(false);
     },
   );
+});
+
+describe("homePathFor", () => {
+  it("sends a cashier to Sell", () => {
+    expect(homePathFor("cashier")).toBe("/sell");
+  });
+
+  it("sends an owner to the account page until the shell exists", () => {
+    expect(homePathFor("owner")).toBe("/account");
+  });
 });

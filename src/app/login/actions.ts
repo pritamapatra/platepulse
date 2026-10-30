@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { homePathFor } from "@/lib/routes";
+import { getMembership } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = { error?: string };
@@ -24,10 +26,11 @@ export async function logIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) {
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error || !data.user) {
     return { error: "Wrong email or password" };
   }
 
-  redirect("/account");
+  const membership = await getMembership(data.user.id);
+  redirect(membership ? homePathFor(membership.role) : "/account");
 }
