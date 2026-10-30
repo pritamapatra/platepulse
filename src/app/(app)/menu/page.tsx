@@ -1,13 +1,11 @@
-import { asc, eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { db } from "@/db";
-import { menuItems } from "@/db/schema";
-import { formatPaise } from "@/lib/money";
+import { listAllMenuItems } from "@/lib/menu-queries";
 import { homePathFor } from "@/lib/routes";
 import { getSession } from "@/lib/session";
 import { MenuForm } from "./menu-form";
+import { MenuItemRow } from "./menu-item-row";
 
 export const metadata: Metadata = { title: "Menu" };
 
@@ -16,15 +14,7 @@ async function MenuContent() {
   if (!session) redirect("/login");
   if (session.role !== "owner") redirect(homePathFor(session.role));
 
-  const items = await db
-    .select({
-      id: menuItems.id,
-      name: menuItems.name,
-      pricePaise: menuItems.pricePaise,
-    })
-    .from(menuItems)
-    .where(eq(menuItems.restaurantId, session.restaurantId))
-    .orderBy(asc(menuItems.createdAt));
+  const items = await listAllMenuItems(session.restaurantId);
 
   return (
     <div className="space-y-8">
@@ -36,15 +26,15 @@ async function MenuContent() {
         ) : (
           <ul className="divide-y divide-ink-300 border-y border-ink-300">
             {items.map((item) => (
-              <li
+              <MenuItemRow
                 key={item.id}
-                className="flex min-h-11 items-center justify-between gap-4 py-2"
-              >
-                <span className="text-ink-900">{item.name}</span>
-                <span className="tabular-nums text-ink-600">
-                  {formatPaise(item.pricePaise)}
-                </span>
-              </li>
+                item={{
+                  id: item.id,
+                  name: item.name,
+                  pricePaise: item.pricePaise,
+                  active: item.active,
+                }}
+              />
             ))}
           </ul>
         )}

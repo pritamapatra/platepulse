@@ -53,13 +53,11 @@ export async function addCashier(
         return { id: data.user.id };
       },
       addCashierMembership: async (userId, targetRestaurantId) => {
-        await db
-          .insert(memberships)
-          .values({
-            restaurantId: targetRestaurantId,
-            userId,
-            role: "cashier",
-          });
+        await db.insert(memberships).values({
+          restaurantId: targetRestaurantId,
+          userId,
+          role: "cashier",
+        });
       },
       deleteAuthUser: async (userId) => {
         await admin.auth.admin.deleteUser(userId);
