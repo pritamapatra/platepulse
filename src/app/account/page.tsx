@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/session";
 import { logOut } from "./actions";
+import { CashierForm } from "./cashier-form";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -12,9 +13,12 @@ async function AccountDetails() {
   if (!session) redirect("/login");
 
   return (
-    <div className="space-y-4">
-      <p className="text-ink-600">Signed in as {session.email}</p>
-      <p className="text-ink-600">Role: {session.role}</p>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <p className="text-ink-600">Signed in as {session.email}</p>
+        <p className="text-ink-600">Role: {session.role}</p>
+      </div>
+      {session.role === "owner" ? <CashierForm /> : null}
       <form action={logOut}>
         <Button type="submit" variant="outline" className="h-[52px] w-full">
           Sign out
