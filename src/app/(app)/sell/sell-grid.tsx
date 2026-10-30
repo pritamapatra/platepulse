@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   addToCart,
@@ -18,12 +18,21 @@ import {
   canSaveSale,
   type PaymentMethod,
 } from "@/lib/payment";
+import { cartSignature, nextAttempt, type Attempt } from "@/lib/sale-attempt";
+import { newRequestId } from "@/lib/uuid";
+import { saveSale } from "./sale-actions";
 
 type Tile = {
   id: string;
   name: string;
   pricePaise: number;
 };
+
+type Status =
+  | { kind: "idle" }
+  | { kind: "saving" }
+  | { kind: "saved"; totalPaise: number }
+  | { kind: "failed"; error: string };
 
 export function SellGrid({
   items,
@@ -34,6 +43,9 @@ export function SellGrid({
 }) {
   const [cart, setCart] = useState<Cart>({});
   const [method, setMethod] = useState<PaymentMethod | null>(null);
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const attemptRef = useRef<Attempt>(null);
+  const lockRef = useRef(false);
 
   const validIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
   const prices = useMemo(
@@ -46,15 +58,72 @@ export function SellGrid({
   const count = cartItemCount(effective);
   const total = cartTotalPaise(effective, prices);
   const activeMethod = count > 0 ? method : null;
-  const saveEnabled = canSaveSale({ totalPaise: total, method: activeMethod });
+  const saving = status.kind === "saving";
+  const saveEnabled =
+    canSaveSale({ totalPaise: total, method: activeMethod }) && !saving;
+
+  function clearMessage() {
+    setStatus((current) =>
+      current.kind === "saving" ? current : { kind: "idle" },
+    );
+  }
 
   function add(id: string) {
+    if (saving) return;
     if (count === 0) setMethod(null);
+    clearMessage();
     setCart((current) => addToCart(pruneCart(current, validIds), id));
   }
 
   function remove(id: string) {
+    if (saving) return;
+    clearMessage();
     setCart((current) => removeFromCart(pruneCart(current, validIds), id));
+  }
+
+  function choose(value: PaymentMethod) {
+    if (saving) return;
+    clearMessage();
+    setMethod(value);
+  }
+
+  async function save() {
+    if (lockRef.current || activeMethod === null || !saveEnabled) return;
+    lockRef.current = true;
+
+    const attempt = nextAttempt(
+      attemptRef.current,
+      cartSignature(effective, activeMethod),
+      newRequestId,
+    );
+    attemptRef.current = attempt;
+    setStatus({ kind: "saving" });
+
+    try {
+      const result = await saveSale({
+        clientRequestId: attempt.id,
+        method: activeMethod,
+        lines: Object.entries(effective).map(([menuItemId, quantity]) => ({
+          menuItemId,
+          quantity,
+        })),
+      });
+      if (result.ok) {
+        attemptRef.current = null;
+        setCart({});
+        setMethod(null);
+        setStatus({ kind: "saved", totalPaise: result.totalPaise });
+      } else {
+        setStatus({ kind: "failed", error: result.error });
+      }
+    } catch {
+      setStatus({
+        kind: "failed",
+        error: "Cannot save. Check your connection and retry.",
+      });
+    } finally {
+      lockRef.current = false;
+    }
   }
 
   if (items.length === 0) {
@@ -77,6 +146,11 @@ export function SellGrid({
       <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-600">
         Items
       </h2>
+      {status.kind === "saved" ? (
+        <p role="status" className="font-medium text-ok">
+          Sale saved: {formatPaise(status.totalPaise)}
+        </p>
+      ) : null}
       {removedLines > 0 ? (
         <p role="status" className="text-sm text-warn">
           Some items are no longer available and were removed from the cart.
@@ -89,9 +163,10 @@ export function SellGrid({
             <li key={item.id} className="relative h-24 select-none">
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => add(item.id)}
                 aria-label={`Add ${item.name}, ${formatPaise(item.pricePaise)}, ${qty} in cart`}
-                className={`flex h-full w-full flex-col justify-between rounded-lg bg-surface-subtle p-3 text-left active:bg-ink-300 focus-visible:outline-2 focus-visible:outline-brand ${
+                className={`flex h-full w-full flex-col justify-between rounded-lg bg-surface-subtle p-3 text-left active:bg-ink-300 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60 ${
                   qty > 0 ? "ring-2 ring-brand" : ""
                 }`}
               >
@@ -116,6 +191,7 @@ export function SellGrid({
               {qty > 0 ? (
                 <button
                   type="button"
+                  disabled={saving}
                   onClick={() => remove(item.id)}
                   aria-label={`Remove one ${item.name}`}
                   className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center focus-visible:outline-2 focus-visible:outline-brand"
@@ -152,8 +228,9 @@ export function SellGrid({
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  onClick={() => setMethod(value)}
-                  className={`h-11 rounded-lg border text-base font-semibold focus-visible:outline-2 focus-visible:outline-brand ${
+                  disabled={saving}
+                  onClick={() => choose(value)}
+                  className={`h-11 rounded-lg border text-base font-semibold focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60 ${
                     selected
                       ? "border-brand bg-brand text-white"
                       : "border-ink-300 bg-surface text-ink-900"
@@ -164,15 +241,26 @@ export function SellGrid({
               );
             })}
           </div>
-          <p role="status" className="min-h-5 text-sm text-ink-600">
-            {activeMethod === null ? "Choose Cash or UPI to continue" : null}
+          <p role="status" className="min-h-5 text-sm">
+            {status.kind === "failed" ? (
+              <span className="text-bad">{status.error}</span>
+            ) : activeMethod === null ? (
+              <span className="text-ink-600">
+                Choose Cash or UPI to continue
+              </span>
+            ) : null}
           </p>
           <Button
             type="button"
             disabled={!saveEnabled}
+            onClick={save}
             className="h-[52px] w-full"
           >
-            Save sale
+            {saving
+              ? "Saving"
+              : status.kind === "failed"
+                ? "Retry"
+                : "Save sale"}
           </Button>
         </div>
       ) : null}
