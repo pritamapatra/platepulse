@@ -258,3 +258,32 @@ export const expenses = pgTable(
     index("expenses_restaurant_date_idx").on(t.restaurantId, t.businessDate),
   ],
 );
+
+export const dailyCloses = pgTable(
+  "daily_closes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    businessDate: date("business_date", { mode: "string" }).notNull(),
+    openingCashPaise: integer("opening_cash_paise").notNull(),
+    countedCashPaise: integer("counted_cash_paise"),
+    upiReportedPaise: integer("upi_reported_paise"),
+    expectedCashPaise: integer("expected_cash_paise"),
+    expectedUpiPaise: integer("expected_upi_paise"),
+    note: text("note"),
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockedBy: uuid("locked_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("daily_closes_restaurant_date_uq").on(
+      t.restaurantId,
+      t.businessDate,
+    ),
+  ],
+);
