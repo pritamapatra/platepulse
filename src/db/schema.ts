@@ -98,3 +98,35 @@ export const saleLines = pgTable(
   },
   (t) => [index("sale_lines_sale_idx").on(t.saleId)],
 );
+
+export const suppliers = pgTable(
+  "suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique("suppliers_restaurant_name_uq").on(t.restaurantId, t.name)],
+);
+
+export const ingredients = pgTable(
+  "ingredients",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    name: text("name").notNull(),
+    unit: text("unit").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique("ingredients_restaurant_name_uq").on(t.restaurantId, t.name)],
+);
