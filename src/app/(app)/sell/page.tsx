@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { logOut } from "@/app/account/actions";
+import { logOut } from "@/app/(app)/account/actions";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/session";
 
