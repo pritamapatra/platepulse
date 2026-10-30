@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -56,7 +58,10 @@ export const menuItems = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [index("menu_items_restaurant_idx").on(t.restaurantId)],
+  (t) => [
+    check("menu_items_price_positive", sql`${t.pricePaise} > 0`),
+    index("menu_items_restaurant_idx").on(t.restaurantId),
+  ],
 );
 
 export const paymentMethod = pgEnum("payment_method", ["cash", "upi"]);
@@ -79,6 +84,7 @@ export const sales = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
+    check("sales_total_positive", sql`${t.totalPaise} > 0`),
     unique("sales_restaurant_request_uq").on(t.restaurantId, t.clientRequestId),
     index("sales_restaurant_date_idx").on(t.restaurantId, t.businessDate),
   ],
@@ -98,7 +104,11 @@ export const saleLines = pgTable(
     unitPricePaise: integer("unit_price_paise").notNull(),
     quantity: integer("quantity").notNull(),
   },
-  (t) => [index("sale_lines_sale_idx").on(t.saleId)],
+  (t) => [
+    check("sale_lines_price_positive", sql`${t.unitPricePaise} > 0`),
+    check("sale_lines_quantity_positive", sql`${t.quantity} > 0`),
+    index("sale_lines_sale_idx").on(t.saleId),
+  ],
 );
 
 export const suppliers = pgTable(
@@ -166,6 +176,7 @@ export const purchases = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
+    check("purchases_total_positive", sql`${t.totalPaise} > 0`),
     unique("purchases_restaurant_request_uq").on(
       t.restaurantId,
       t.clientRequestId,
@@ -192,7 +203,12 @@ export const purchaseLines = pgTable(
     quality: purchaseQuality("quality").notNull().default("good"),
     issue: purchaseIssue("issue").notNull().default("none"),
   },
-  (t) => [index("purchase_lines_purchase_idx").on(t.purchaseId)],
+  (t) => [
+    check("purchase_lines_quantity_positive", sql`${t.quantity} > 0`),
+    check("purchase_lines_rate_positive", sql`${t.ratePaise} > 0`),
+    check("purchase_lines_total_positive", sql`${t.lineTotalPaise} > 0`),
+    index("purchase_lines_purchase_idx").on(t.purchaseId),
+  ],
 );
 
 export const supplierPayments = pgTable(
@@ -217,6 +233,7 @@ export const supplierPayments = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
+    check("supplier_payments_amount_positive", sql`${t.amountPaise} > 0`),
     unique("supplier_payments_restaurant_request_uq").on(
       t.restaurantId,
       t.clientRequestId,
@@ -252,6 +269,7 @@ export const expenses = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
+    check("expenses_amount_positive", sql`${t.amountPaise} > 0`),
     unique("expenses_restaurant_request_uq").on(
       t.restaurantId,
       t.clientRequestId,
@@ -282,6 +300,9 @@ export const dailyCloses = pgTable(
       .defaultNow(),
   },
   (t) => [
+    check("daily_closes_opening_nonneg", sql`${t.openingCashPaise} >= 0`),
+    check("daily_closes_counted_nonneg", sql`${t.countedCashPaise} >= 0`),
+    check("daily_closes_upi_nonneg", sql`${t.upiReportedPaise} >= 0`),
     unique("daily_closes_restaurant_date_uq").on(
       t.restaurantId,
       t.businessDate,
