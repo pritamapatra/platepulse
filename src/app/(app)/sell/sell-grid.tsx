@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   addToCart,
   cartItemCount,
@@ -11,6 +12,12 @@ import {
   type Cart,
 } from "@/lib/cart";
 import { formatPaise } from "@/lib/money";
+import {
+  PAYMENT_LABELS,
+  PAYMENT_METHODS,
+  canSaveSale,
+  type PaymentMethod,
+} from "@/lib/payment";
 
 type Tile = {
   id: string;
@@ -26,6 +33,7 @@ export function SellGrid({
   isOwner: boolean;
 }) {
   const [cart, setCart] = useState<Cart>({});
+  const [method, setMethod] = useState<PaymentMethod | null>(null);
 
   const validIds = useMemo(() => new Set(items.map((i) => i.id)), [items]);
   const prices = useMemo(
@@ -37,8 +45,11 @@ export function SellGrid({
   const removedLines = Object.keys(cart).length - Object.keys(effective).length;
   const count = cartItemCount(effective);
   const total = cartTotalPaise(effective, prices);
+  const activeMethod = count > 0 ? method : null;
+  const saveEnabled = canSaveSale({ totalPaise: total, method: activeMethod });
 
   function add(id: string) {
+    if (count === 0) setMethod(null);
     setCart((current) => addToCart(pruneCart(current, validIds), id));
   }
 
@@ -119,16 +130,50 @@ export function SellGrid({
         })}
       </ul>
       {count > 0 ? (
-        <div
-          role="status"
-          className="sticky bottom-20 z-10 flex items-center justify-between rounded-lg border border-ink-300 bg-surface p-3 shadow-sm"
-        >
-          <span className="text-ink-600">
-            {count} {count === 1 ? "item" : "items"}
-          </span>
-          <span className="text-xl font-semibold tabular-nums text-ink-900">
-            {formatPaise(total)}
-          </span>
+        <div className="sticky bottom-20 z-10 space-y-3 rounded-lg border border-ink-300 bg-surface p-3 shadow-sm">
+          <div role="status" className="flex items-center justify-between">
+            <span className="text-ink-600">
+              {count} {count === 1 ? "item" : "items"}
+            </span>
+            <span className="text-xl font-semibold tabular-nums text-ink-900">
+              {formatPaise(total)}
+            </span>
+          </div>
+          <div
+            role="radiogroup"
+            aria-label="Payment method"
+            className="grid grid-cols-2 gap-2"
+          >
+            {PAYMENT_METHODS.map((value) => {
+              const selected = activeMethod === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setMethod(value)}
+                  className={`h-11 rounded-lg border text-base font-semibold focus-visible:outline-2 focus-visible:outline-brand ${
+                    selected
+                      ? "border-brand bg-brand text-white"
+                      : "border-ink-300 bg-surface text-ink-900"
+                  }`}
+                >
+                  {PAYMENT_LABELS[value]}
+                </button>
+              );
+            })}
+          </div>
+          <p role="status" className="min-h-5 text-sm text-ink-600">
+            {activeMethod === null ? "Choose Cash or UPI to continue" : null}
+          </p>
+          <Button
+            type="button"
+            disabled={!saveEnabled}
+            className="h-[52px] w-full"
+          >
+            Save sale
+          </Button>
         </div>
       ) : null}
     </section>
