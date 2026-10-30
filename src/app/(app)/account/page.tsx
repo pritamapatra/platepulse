@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,17 @@ async function AccountDetails() {
         <p className="text-ink-600">Signed in as {session.email}</p>
         <p className="text-ink-600">Role: {session.role}</p>
       </div>
-      {session.role === "owner" ? <CashierForm /> : null}
+      {session.role === "owner" ? (
+        <>
+          <Link
+            href="/menu"
+            className="flex h-[52px] w-full items-center justify-center rounded-[8px] border border-ink-300 text-ink-900"
+          >
+            Menu
+          </Link>
+          <CashierForm />
+        </>
+      ) : null}
       <form action={logOut}>
         <Button type="submit" variant="outline" className="h-[52px] w-full">
           Sign out

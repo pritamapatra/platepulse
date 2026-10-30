@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "menu_items_restaurant_name_uq" ON "menu_items" USING btree ("restaurant_id",lower("name"));

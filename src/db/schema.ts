@@ -13,6 +13,7 @@ import {
   timestamp,
   unique,
   uuid,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const memberRole = pgEnum("member_role", ["owner", "cashier"]);
@@ -61,6 +62,10 @@ export const menuItems = pgTable(
   (t) => [
     check("menu_items_price_positive", sql`${t.pricePaise} > 0`),
     index("menu_items_restaurant_idx").on(t.restaurantId),
+    uniqueIndex("menu_items_restaurant_name_uq").on(
+      t.restaurantId,
+      sql`lower(${t.name})`,
+    ),
   ],
 );
 
