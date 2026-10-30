@@ -3,6 +3,7 @@ import {
   date,
   index,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -129,4 +130,66 @@ export const ingredients = pgTable(
       .defaultNow(),
   },
   (t) => [unique("ingredients_restaurant_name_uq").on(t.restaurantId, t.name)],
+);
+
+export const purchaseQuality = pgEnum("purchase_quality", [
+  "good",
+  "acceptable",
+  "poor",
+]);
+
+export const purchaseIssue = pgEnum("purchase_issue", [
+  "none",
+  "short",
+  "excess",
+  "damaged",
+]);
+
+export const purchases = pgTable(
+  "purchases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    restaurantId: uuid("restaurant_id")
+      .notNull()
+      .references(() => restaurants.id),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    createdBy: uuid("created_by").notNull(),
+    clientRequestId: uuid("client_request_id").notNull(),
+    businessDate: date("business_date", { mode: "string" }).notNull(),
+    totalPaise: integer("total_paise").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (t) => [
+    unique("purchases_restaurant_request_uq").on(
+      t.restaurantId,
+      t.clientRequestId,
+    ),
+    index("purchases_restaurant_supplier_idx").on(t.restaurantId, t.supplierId),
+    index("purchases_restaurant_date_idx").on(t.restaurantId, t.businessDate),
+  ],
+);
+
+export const purchaseLines = pgTable(
+  "purchase_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    purchaseId: uuid("purchase_id")
+      .notNull()
+      .references(() => purchases.id),
+    ingredientId: uuid("ingredient_id")
+      .notNull()
+      .references(() => ingredients.id),
+    quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull(),
+    unit: text("unit").notNull(),
+    ratePaise: integer("rate_paise").notNull(),
+    lineTotalPaise: integer("line_total_paise").notNull(),
+    quality: purchaseQuality("quality").notNull().default("good"),
+    issue: purchaseIssue("issue").notNull().default("none"),
+  },
+  (t) => [index("purchase_lines_purchase_idx").on(t.purchaseId)],
 );
